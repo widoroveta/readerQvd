@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import pandas as pd
 from qvd import qvd_reader  # Suponiendo que tienes una función qvd_reader para leer archivos QVD
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
 
 class App:
     def __init__(self, root):
@@ -17,8 +19,20 @@ class App:
         self.btn_guardar = tk.Button(self.frame, text="Guardar como XLSX", command=self.guardar_xlsx, state=tk.DISABLED)
         self.btn_guardar.pack(pady=10)
 
-        self.tabla = ttk.Treeview(self.frame)
+        # Crear Scrollbar vertical
+        self.scrollbar_y = tk.Scrollbar(self.frame, orient=tk.VERTICAL)
+        self.scrollbar_y.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Crear Scrollbar horizontal
+        self.scrollbar_x = tk.Scrollbar(self.frame, orient=tk.HORIZONTAL)
+        self.scrollbar_x.pack(fill=tk.X)
+
+        self.tabla = ttk.Treeview(self.frame, xscrollcommand=self.scrollbar_x.set, yscrollcommand=self.scrollbar_y.set)
         self.tabla.pack(pady=10)
+
+        # Configurar la Scrollbar para controlar la tabla
+        self.scrollbar_x.config(command=self.tabla.xview)
+        self.scrollbar_y.config(command=self.tabla.yview)
 
     def buscar_archivo(self):
         ruta_archivo = filedialog.askopenfilename(filetypes=[("Archivos QVD", "*.qvd")])
@@ -51,10 +65,18 @@ class App:
         if ruta_guardar:
             try:
                 self.df.to_excel(ruta_guardar, index=False)  # Guardar DataFrame en archivo XLSX
+
+                # Comprobar la integridad del archivo XLSX guardado
+                wb = Workbook()
+                ws = wb.active
+                ws.title = "Datos"
+                for r in dataframe_to_rows(self.df, index=False, header=True):
+                    ws.append(r)
+                wb.save(ruta_guardar)
+
                 messagebox.showinfo("Guardado", "Archivo XLSX guardado correctamente.")
             except Exception as e:
                 messagebox.showerror("Error", f"No se pudo guardar el archivo: {e}")
-
 def main():
     root = tk.Tk()
     app = App(root)
